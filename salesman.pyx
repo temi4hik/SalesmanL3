@@ -6,7 +6,7 @@ from libc.stdint cimport uint32_t
 cdef extern from "line.c":
     ctypedef struct Point:
         float x;
-        float y;s
+        float y;
 
     ctypedef struct Line:
         Point *coordinates;
