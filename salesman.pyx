@@ -1,4 +1,4 @@
-from typing import List, Tuples
+from typing import List, Tuple
 cimport cython
 from libc.stdlib cimport  malloc
 from libc.stdint cimport uint32_t
@@ -6,7 +6,7 @@ from libc.stdint cimport uint32_t
 cdef extern from "line.c":
     ctypedef struct Point:
         float x;
-        float y;
+        float y;s
 
     ctypedef struct Line:
         Point *coordinates;
