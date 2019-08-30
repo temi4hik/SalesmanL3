@@ -1,28 +1,60 @@
 from typing import List, Tuple
 cimport cython
-from libc.stdlib cimport  malloc
+from libcpp.vector cimport vector
 from libc.stdint cimport uint32_t
 
-cdef extern from "line.c":
-    ctypedef struct Point:
-        float x;
-        float y;
+cdef extern from "Line.cpp":
+    cdef cppclass Point:
+        float x
+        float y
 
-    ctypedef struct Line:
-        Point *coordinates;
-        float *timestamps;
+        Point(float x, float y) except +
+        Point() except +
 
-    void line_init(Line *line, Point *coordinates, float *timestamps, uint32_t size)
+    cdef cppclass Line:
+        vector[Point] coordinates;
+        vector[float] timestamps;
 
-    Point line_get_position(Line *line, float timestamp, uint32_t size)
+        Line() except +
+        Line(vector[Point] coordinates, vector[float] timestamps) except +
+        Line(Point *coordinates, float *timestamps, uint32_t size) except +
 
+        Point get_position(float timestamp)
+
+cdef class PyPoint:
+    cdef Point c_point;
+
+    def __cinit__(self, float x, float y):
+        self.c_point = Point(x, y)
+
+    def __str__(self):
+        return "x: {}, y: {}".format(self.x, self.y)
+
+    def __repr__(self):
+        return "x: {}, y: {}".format(self.x, self.y)
+
+    @property
+    def x(self) -> float:
+        return self.c_point.x
+
+    @x.setter
+    def x(self, val: float):
+        self.c_point.x = val
+
+    @property
+    def y(self) -> float:
+        return self.c_point.y
+
+    @y.setter
+    def y(self, val) -> float:
+        self.c_point.y = val
 
 
 cdef class Line_Py:
-    cdef Point *coordinates;
-    cdef float *timestamps;
+    cdef vector[Point] coordinates;
+    cdef vector[float] timestamps;
     cdef Line line;
-    cdef uint32_t size;
+
 
     def __init__(self, coordinates: List[Tuple[float, float]], timestamps: List[float]):
         if len(coordinates) != len(timestamps):
@@ -34,31 +66,20 @@ cdef class Line_Py:
         if len(coordinates) == 0:
             raise ValueError("Points size must not be zero")
 
+        for i in range(len(timestamps)):
+            coord = coordinates[i]
+            timestamp = timestamps[i]
+            p = PyPoint(coord[0], coord[1])
 
-        cdef float *times;
-        cdef Point *coords;
-        cdef uint32_t size = len(timestamps)
+            self.coordinates.push_back(p.c_point)
+            self.timestamps.push_back(timestamp)
 
-        times = <float *>malloc(size * cython.sizeof(float))
-        coords = <Point *>malloc(size * cython.sizeof(Point))
-
-        for i in range(size):
-            times[i] = timestamps[i]
-            coords[i] = Point(coordinates[i][0], coordinates[i][1])
-
-        cdef Line line;
-
-        line_init(&line, coords, times, size)
-
-        self.line = line
-        self.coordinates = coords
-        self.timestamps = times
-        self.size = size
+        self.line = Line(self.coordinates, self.timestamps)
 
 
     def get_position_at(self, timestamp: float):
-        cdef Point position
+        cdef Point p = self.line.get_position(timestamp)
 
-        position = line_get_position(&self.line, timestamp, self.size)
+        point = PyPoint(p.x, p.y)
 
-        return position
+        return point

@@ -9,6 +9,3 @@ line = Line_Py(points, times)
 print(line.get_position_at(33))
 
 
-line = Line_Py([1, 2], [1, 2])
-
-
